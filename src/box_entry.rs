@@ -2,8 +2,23 @@ use std::io::stdout;
 use crossterm::cursor::MoveTo;
 use crossterm::execute;
 
-const _RIGHT_UNCONNECTED: &str = "╴";
-const _LEFT_UNCONNECTED:  &str = "╶";
+/***
+ * Unicode stuff
+ * TOP_LEFT           ┌
+ * TOP_RIGHT          ┐
+ * VERTICAL           │
+ * HORIZONTAL         ─
+ * BOTTOM_LEFT        └
+ * BOTTOM_RIGHT       ┘
+ * TOP_DOWN_RIGHT     ├
+ * TOP_DOWN_LEFT      ┤
+ * BOTTOM_UP_RIGHT    ┴
+ * BOTTOM_UP_LEFT     ┬
+ * RIGHT_UNCONNECTED  ╴
+ * LEFT_UNCONNECTED   ╶
+ * TOP_UNCONNECTED    ╷
+ * BOTTOM_UNCONNECTED ╵
+*/
 
 const _MAX_BOX_LINE_LEN: usize = 30;
 
@@ -72,12 +87,29 @@ impl BoxEntry {
         self.pos.shift(x, y);
     }
 
+    pub fn close(&mut self) {
+        self.closed = true;
+        // clear the box's drawn content
+        for x in 0..self.lines.len() + 2 {
+            let _ = execute!(stdout(),
+            MoveTo(self.pos.x, self.pos.y + x as u16));
+            println!("{}", " ".repeat(self.longest + 4));
+        }
+        self.display();
+    }
+
+    pub fn open(&mut self) {
+        self.closed = false;
+        self.display();
+    }
+
     /// Displays the box at the defined position
     pub fn display(&self) {
         if self.closed {
             let _ = execute!(stdout(),
             MoveTo(self.pos.x, self.pos.y));
             println!("+");
+            return;
         }
         // print the top border
         let _ = execute!(stdout(),
