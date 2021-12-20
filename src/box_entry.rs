@@ -46,7 +46,7 @@ pub struct BoxEntry {
     lines: Vec<String>,
     pos: BoxPos,
     // todo(eric): have something to store linked boxes for connecting lines
-    longest: usize,
+    longest: u16,
     closed: bool,
 }
 
@@ -55,12 +55,12 @@ impl BoxEntry {
     /// Creates a new box entry from the given lines and position
     pub fn new<S: Into<String>>(lines: Vec<S>, pos: BoxPos) -> Self {
         // todo: line wrapping using MAX_BOX_LINE_LEN
-        let mut longest = 0;
+        let mut longest: u16 = 0;
         let mut lns = Vec::new();
         for s in lines {
             let l = s.into();
-            if l.len() > longest {
-                longest = l.len();
+            if l.len() > longest as usize {
+                longest = l.len() as u16;
             }
             lns.push(l);
         }
@@ -73,33 +73,60 @@ impl BoxEntry {
     }
 
     /// the size of the box without the border
-    pub fn inner_size(&self) -> (usize, usize) {
-        (self.longest, self.lines.len())
+    pub fn inner_size(&self) -> (u16, u16) {
+        if self.closed {
+            (self.longest, self.lines.len() as u16)
+        } else {
+            (1, 0)
+        }
     }
 
     /// the size of the box with the border included
-    pub fn outer_size(&self) -> (usize, usize) {
-        (self.longest + 2, self.lines.len()+ 2)
+    pub fn outer_size(&self) -> (u16, u16) {
+        if self.closed {
+            (2, 3)
+        } else {
+            (self.longest + 4, self.lines.len() as u16 + 2)
+        }
     }
 
     /// move the box to a new location
     pub fn move_to(&mut self, x: u16, y: u16) {
+        self.erase();
         self.pos.shift(x, y);
+        self.display();
     }
 
-    pub fn close(&mut self) {
-        self.closed = true;
+    pub fn erase(&mut self) {
         // clear the box's drawn content
         for x in 0..self.lines.len() + 2 {
             let _ = execute!(stdout(),
             MoveTo(self.pos.x, self.pos.y + x as u16));
-            println!("{}", " ".repeat(self.longest + 4));
+            println!("{}", " ".repeat(self.longest as usize + 4));
         }
+    }
+
+    pub fn close(&mut self) {
+        self.closed = true;
+        self.erase();
         self.display();
+    }
+
+    pub fn box_pos(&self) -> BoxPos {
+        self.pos
     }
 
     pub fn open(&mut self) {
         self.closed = false;
+        self.display();
+    }
+
+    pub fn toggle(&mut self) {
+        if self.closed {
+            self.open();
+        } else {
+            self.close();
+        }
         self.display();
     }
 
@@ -108,25 +135,28 @@ impl BoxEntry {
         if self.closed {
             let _ = execute!(stdout(),
             MoveTo(self.pos.x, self.pos.y));
-            println!("+");
+            println!("+─┐");
+            let _ = execute!(stdout(),
+            MoveTo(self.pos.x, self.pos.y + 1));
+            println!("└─┘");
             return;
         }
         // print the top border
         let _ = execute!(stdout(),
         MoveTo(self.pos.x, self.pos.y));
         //println!("┌{}┐", "─".repeat(self.longest + 2));
-        println!("┌{}x", "─".repeat(self.longest + 2));
+        println!("x{}┐", "─".repeat(self.longest as usize + 2));
         // print the text lines
         for y in 0..self.lines.len() {
             let l = self.lines.get(y).unwrap();
             let _ = execute!(stdout(),
             MoveTo(self.pos.x, self.pos.y + (y as u16 + 1)));
-            println!("│ {}{} │", l, " ".repeat(self.longest - l.len()));
+            println!("│ {}{} │", l, " ".repeat(self.longest as usize - l.len()));
         }
         // print the bottom border
         let _ = execute!(stdout(),
         MoveTo(self.pos.x, self.pos.y + self.lines.len() as u16 + 1));
-        println!("└{}┘", "─".repeat(self.longest + 2));
+        println!("└{}┘", "─".repeat(self.longest as usize + 2));
     }
 
 }
