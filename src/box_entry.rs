@@ -84,7 +84,7 @@ impl BoxEntry {
     /// the size of the box with the border included
     pub fn outer_size(&self) -> (u16, u16) {
         if self.closed {
-            (2, 3)
+            (3, 2)
         } else {
             (self.longest + 4, self.lines.len() as u16 + 2)
         }

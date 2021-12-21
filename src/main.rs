@@ -7,9 +7,10 @@ use crate::node::Node;
 
 pub mod box_entry;
 pub mod node;
+pub mod line;
 
 fn main() {
-    execute!(stdout(), Clear(ClearType::All), Hide);
+    execute!(stdout(), Clear(ClearType::All), Hide).unwrap();
     let boxy = BoxEntry::new(
         vec!["Box 1", "this is the left most box", "The first box as well!"],
         BoxPos::new(2, 5)
@@ -50,14 +51,14 @@ fn main() {
 
     let mut boxy7 = BoxEntry::new(
         vec!["Box 7", "The last box", "No more boxes after this!"],
-        BoxPos::new(90, 5)
+        BoxPos::new(79, 7)
     );
     //boxy7.close();
 
     let node3 = Node::new(boxy6, vec![Node::new(boxy7, vec![])]);
     node3.display();
 
-    execute!(stdout(), Show, MoveTo(0, 100));
+    execute!(stdout(), Show, MoveTo(0, 100)).unwrap();
     loop {
 
     }
