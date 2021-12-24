@@ -1,6 +1,7 @@
 use std::io::stdout;
 use crossterm::cursor::MoveTo;
 use crossterm::execute;
+use crate::DrawBuf;
 
 /***
  * Unicode stuff
@@ -91,10 +92,10 @@ impl BoxEntry {
     }
 
     /// move the box to a new location
-    pub fn move_to(&mut self, x: u16, y: u16) {
+    pub fn move_to(&mut self, x: u16, y: u16, buf: &mut DrawBuf) {
         self.erase();
         self.pos.shift(x, y);
-        self.display();
+        self.display(buf);
     }
 
     pub fn erase(&mut self) {
@@ -106,57 +107,49 @@ impl BoxEntry {
         }
     }
 
-    pub fn close(&mut self) {
+    pub fn close(&mut self, buf: &mut DrawBuf) {
         self.closed = true;
         self.erase();
-        self.display();
+        self.display(buf);
     }
 
     pub fn box_pos(&self) -> BoxPos {
         self.pos
     }
 
-    pub fn open(&mut self) {
+    pub fn open(&mut self, buf: &mut DrawBuf) {
         self.closed = false;
-        self.display();
+        self.display(buf);
     }
 
-    pub fn toggle(&mut self) {
+    pub fn toggle(&mut self, buf: &mut DrawBuf) {
         if self.closed {
-            self.open();
+            self.open(buf);
         } else {
-            self.close();
+            self.close(buf);
         }
-        self.display();
     }
 
     /// Displays the box at the defined position
-    pub fn display(&self) {
+    pub fn display(&self, buf: &mut DrawBuf) {
         if self.closed {
-            let _ = execute!(stdout(),
-            MoveTo(self.pos.x, self.pos.y));
-            println!("+─┐");
-            let _ = execute!(stdout(),
-            MoveTo(self.pos.x, self.pos.y + 1));
-            println!("└─┘");
+            buf.print(self.pos.x, self.pos.y, "+─┐");
+            buf.print(self.pos.x, self.pos.y + 1, "└─┘");
             return;
         }
         // print the top border
-        let _ = execute!(stdout(),
-        MoveTo(self.pos.x, self.pos.y));
-        //println!("┌{}┐", "─".repeat(self.longest + 2));
-        println!("x{}┐", "─".repeat(self.longest as usize + 2));
+        buf.print(self.pos.x, self.pos.y,
+                  format!("x{}┐", "─".repeat(self.longest as usize + 2)));
+        //buf.print(self.pos.x, self.pos.y, format!("┌{}┐", "─".repeat(self.longest + 2))); // for no X in the top left
         // print the text lines
         for y in 0..self.lines.len() {
             let l = self.lines.get(y).unwrap();
-            let _ = execute!(stdout(),
-            MoveTo(self.pos.x, self.pos.y + (y as u16 + 1)));
-            println!("│ {}{} │", l, " ".repeat(self.longest as usize - l.len()));
+            buf.print(self.pos.x, self.pos.y + (y as u16 + 1),
+                      format!("│ {}{} │", l, " ".repeat(self.longest as usize - l.len())));
         }
         // print the bottom border
-        let _ = execute!(stdout(),
-        MoveTo(self.pos.x, self.pos.y + self.lines.len() as u16 + 1));
-        println!("└{}┘", "─".repeat(self.longest as usize + 2));
+        buf.print(self.pos.x, self.pos.y + self.lines.len() as u16 + 1,
+                  format!("└{}┘", "─".repeat(self.longest as usize + 2)));
     }
 
 }
